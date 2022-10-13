@@ -1,0 +1,4 @@
+activate.sh
+.vscode
+__pycache__
+data/
