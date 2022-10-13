@@ -1,6 +1,6 @@
-# edgar-10k-mda
+# Edgar Texting Mining Database
 
-This repo contains some python code I used to download form10k filings  from [EDGAR database](https://www.sec.gov/edgar.shtml), 
+This repo contains python code to download form10k filings  from [EDGAR database](https://www.sec.gov/edgar.shtml), 
 and then extract the MDA section from the downloaded form10k filings heuristically
 
 
