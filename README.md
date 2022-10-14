@@ -57,4 +57,4 @@ The code runs the extraction in the following steps
 ### Notes
 
 - MDA section is parsed heuristically, and may not work for all forms. You'll probably need to modify the `find_mda_from_text` function for coverage.
-- You also might need to modify `normalize_text` function for MDA parsing.
+- You also might need to modify `normalize_text` function for MDA parsing
