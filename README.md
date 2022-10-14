@@ -19,14 +19,16 @@ Specify the starting year and end year and the directory to save outputs.
 By default, indices, forms and mdas will be saved to `./data`
 
 ```bash
-# Downloads and parses MDA section from 2021 to 2021 quarter 1 and 2, and saves to `./data/`
-python edgar.py --start_year 2021 --end_year 2021 --quarters 1 2 --data_dir ./data/
+# Downloads and parses MDA section from 2021 to 2021 quarter 1 and 2, 100 10k-files and saves to `./data/`
+python edgar.py --start_year 2021 --end_year 2021 --quarters 1 2 -n 100 --data_dir ./data/
+
+NOTE : -n argument is not mandatory (default is 10)
 ```
 
 ### Usage
 ```bash
 usage: edgar.py [-h] -s START_YEAR -e END_YEAR [-q QUARTERS [QUARTERS ...]]
-                [-d DATA_DIR] [--overwrite] [--debug]
+                [-d DATA_DIR] [-n NO_OF_10K_FILES] [--overwrite] [--debug]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -36,6 +38,7 @@ optional arguments:
                         year to end
   -q QUARTERS [QUARTERS ...], --quarters QUARTERS [QUARTERS ...]
                         quarters to download for start to end years
+  -n NO_OF_10K_FILES int representing now of files to download                       
   -d DATA_DIR, --data_dir DATA_DIR
                         path to save data
   --overwrite           If True, overwrites downloads and processed files.
