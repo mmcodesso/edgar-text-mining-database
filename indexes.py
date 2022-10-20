@@ -8,36 +8,21 @@ from functools import wraps
 
 import requests
 import pandas as pd
-from sqlalchemy import create_engine
-from args import create_parser
+from args import create_parser, create_db_conection
 
 SEC_GOV_URL = 'https://www.sec.gov/Archives'
-FORM_INDEX_URL = os.path.join(
-    SEC_GOV_URL, 'edgar', 'full-index', '{}', 'QTR{}', 'form.idx').replace("\\", "/")
+FORM_INDEX_URL = os.path.join(SEC_GOV_URL, 'edgar', 'full-index', '{}', 'QTR{}', 'form.idx').replace("\\", "/")
 
 def main():
     # Parse arguments
-    parser = create_parser()
-    args = parser.parse_args()
+    args =create_parser()
 
     #Create database conection
     db_conection = create_db_conection(args.user,args.password,args.host, args.dbname)
       
     # Download indices
     download_indices(args.start_year, args.end_year,
-                     args.quarters, db_conection, args.overwrite)
-
-
-def create_db_conection(user: str, password: str, host : str, dbname : str):
-    """ 
-    Create database conection. If not informed, it will create a sqlite database on ./database/database.sqlite
-    """  
-    if user and password and host and dbname:
-        db_connection = create_engine("postgresql+psycopg2://{user}:{password}@{host}/{dbname}".format(user = user,password = password,host = host,dbname = dbname))
-    else:
-        os.makedirs("./database", exist_ok=True)
-        db_connection = create_engine("sqlite:///database/database.sqlite")
-    return db_connection
+                     args.quarters, db_conection, args.company, args.email)
 
 
 def timeit(f):
@@ -68,9 +53,8 @@ def parse_line_to_record(line, fields_begin):
         record.append(field)
     return record
 
-
 @timeit
-def download_indices(start_year: int, end_year: int, quarters: list, db_conection: str, overwrite: bool):
+def download_indices(start_year: int, end_year: int, quarters: list, db_conection: str, company: str, email: str):
     """ Downloads edgar 10k form indices with multiprocess
     Args:
         start_year (int): starting year
@@ -88,7 +72,12 @@ def download_indices(start_year: int, end_year: int, quarters: list, db_conectio
     
     for url in urls:
         print("Requesting {}".format(url))
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; rv:91.0) Gecko/20100101 Firefox/91.0'}
+
+        if company and email:
+            headers = {'User-Agent': company + " " + email}
+        else:
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; rv:91.0) Gecko/20100101 Firefox/91.0'}
+
         res = requests.get(url, headers=headers).text
         arrived = False
         fields_begin = None
@@ -103,7 +92,8 @@ def download_indices(start_year: int, end_year: int, quarters: list, db_conectio
                 assert fields_begin is not None
                 arrived = True
                 row = parse_line_to_record(line, fields_begin)     
-                row_dict = {"form_type" : row[0],
+                row_dict = {"id": row[2] + "-" + str(row[4]).split('/')[-1][:-4], 
+                            "form_type" : row[0],
                             "company_name" : row[1],
                             'cik' : row[2],
                             'date_filed' : row[3],
@@ -114,7 +104,8 @@ def download_indices(start_year: int, end_year: int, quarters: list, db_conectio
         
     forms_df = pd.DataFrame(forms)
     forms_df = forms_df[(forms_df['form_type'] == "10-K") | (forms_df['form_type'] == "10-Q")]
-    forms_df.to_sql('index_queue',con = db_conection,if_exists='replace',index=False)
+    forms_df.set_index('id',inplace=True)
+    forms_df.to_sql('index_queue',con = db_conection,if_exists='replace',index_label ='id')
 
 
 if __name__ == "__main__":
