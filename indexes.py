@@ -13,8 +13,6 @@ import requests
 import pandas as pd
 from sqlalchemy import create_engine
 
-#from bs4 import BeautifulSoup
-
 SEC_GOV_URL = 'https://www.sec.gov/Archives'
 FORM_INDEX_URL = os.path.join(
     SEC_GOV_URL, 'edgar', 'full-index', '{}', 'QTR{}', 'form.idx').replace("\\", "/")
@@ -94,6 +92,8 @@ def download_indices(start_year: int, end_year: int, quarters: list, db_conectio
     Args:
         start_year (int): starting year
         end_year (int): ending year
+        quarter (list): quartes
+        db_conection: database conection
     """
     # Create a list of the forms to download
     forms = []
