@@ -8,13 +8,15 @@ import itertools
 import os
 import time
 import re
+from typing import Set
 import unicodedata
 from collections import namedtuple
 from functools import wraps
 from glob import glob
-
+import shutil
 import requests
 from bs4 import BeautifulSoup
+from multiprocessing import Manager , Process
 
 SEC_GOV_URL = 'https://www.sec.gov/Archives'
 FORM_INDEX_URL = os.path.join(
@@ -27,6 +29,8 @@ INDEX_HEADERS = ["Form Type", "Company Name",
                  "CIK", "Date Filed", "File Name", "Url"]
 
 
+
+
 def create_parser():
     """Argument Parser"""
     parser = argparse.ArgumentParser()
@@ -36,6 +40,11 @@ def create_parser():
                         help="year to end")
     parser.add_argument('-q', '--quarters', type=int, nargs="+",
                         default=[1, 2, 3, 4], help="quarters to download for start to end years")
+    
+   # parser.add_argument('-n' , '--no_of_10k_files', type=int , default=10 , help="No of 10k files to download")
+
+    parser.add_argument('-n','--no_of_10k_files',type=int, default=10 ,help="No of 10k files to download");
+
     parser.add_argument('-d', '--data_dir', type=str,
                         default="./data", help="path to save data")
     parser.add_argument('--overwrite', action="store_true",
@@ -47,8 +56,20 @@ def create_parser():
 
 def main():
     # Parse arguments
+    
+   
+    
     parser = create_parser()
     args = parser.parse_args()
+
+    PARSE_FAILED_PATH = f"{args.data_dir}mda-failed/"
+    isExist = os.path.exists(PARSE_FAILED_PATH)
+
+    if not isExist:
+        os.makedirs(PARSE_FAILED_PATH);
+        print("The new directory is created to store parse failed MDA files!")
+
+
 
     # Download indices
     index_dir = os.path.join(args.data_dir, "index")
@@ -60,15 +81,37 @@ def main():
 
     # Download forms
     form_dir = os.path.join(args.data_dir, "form10k")
-    download_forms(index_dir, form_dir, args.overwrite, args.debug)
+ 
+    download_forms(args.no_of_10k_files , index_dir, form_dir, args.overwrite ,args.debug)
 
     # Normalize forms
     parsed_form_dir = os.path.join(args.data_dir, "form10k.parsed")
+   
     parse_html_multiprocess(form_dir, parsed_form_dir, args.overwrite)
 
     # Parse MDA
     mda_dir = os.path.join(args.data_dir, "mda")
-    parse_mda_multiprocess(parsed_form_dir, mda_dir, args.overwrite)
+
+
+    manager = Manager() # create only 1 mgr
+    MDA_LIST = manager.dict() # create only 1 dict
+    MDA_LIST['SUCCESS'] = []
+    MDA_LIST['FAILED'] = set()
+    # parse_mda_multiprocess(parsed_form_dir, mda_dir, args.overwrite)
+    p = Process(target=parse_mda_multiprocess,args=(parsed_form_dir, mda_dir, MDA_LIST , PARSE_FAILED_PATH , args.overwrite,))
+    p.start()
+    p.join()
+
+    print(MDA_LIST)
+    
+    print("Total 10k Files -> {}".format(args.no_of_10k_files))
+
+    print("Total parsed -> {}".format(  len(MDA_LIST["SUCCESS"]) +  len(MDA_LIST["FAILED"])) )
+
+    print("Parse Failed -> {}".format(len(MDA_LIST["FAILED"])))
+
+    print("Parse Success -> {}".format(len(MDA_LIST["SUCCESS"])))
+    
 
 
 def download_file(url: str, download_path: str, overwrite: bool = False):
@@ -197,7 +240,7 @@ def combine_indices_to_csv(index_dir):
 
 
 @timeit
-def download_forms(index_dir: str, form_dir: str, overwrite: bool = False, debug: bool = False):
+def download_forms(no_of_10k_files : int, index_dir: str, form_dir: str, overwrite: bool = False, debug: bool = False):
     """ Reads indices and download forms
     Args:
         index_dir (str)
@@ -212,7 +255,7 @@ def download_forms(index_dir: str, form_dir: str, overwrite: bool = False, debug
     urls = read_url_from_combined_csv(combined_csv)
 
     download_paths = []
-    for url in urls:
+    for url in urls[:no_of_10k_files]:
         download_name = "_".join(url.split('/')[-2:])
         download_path = os.path.join(form_dir, download_name)
         download_paths.append(download_path)
@@ -270,8 +313,7 @@ def parse_html_multiprocess(form_dir, parsed_form_dir, overwrite=False):
     # Multiprocess
     with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
         for form_path, parsed_form_path in zip(form_paths, parsed_form_paths):
-            executor.submit(parse_html,
-                            form_path, parsed_form_path, overwrite)
+            executor.submit(parse_html,form_path, parsed_form_path, overwrite)
 
 
 def parse_html(input_file, output_file, overwrite=False):
@@ -328,7 +370,7 @@ def normalize_text(text):
     return text
 
 
-def parse_mda_multiprocess(form_dir: str, mda_dir: str, overwrite: bool = False):
+def parse_mda_multiprocess(form_dir: str, mda_dir: str, MDA_LIST, PARSE_FAILED_PATH , overwrite: bool = False):
     """ Parse MDA section from forms with multiprocess
     Args:
         form_dir (str)
@@ -346,13 +388,17 @@ def parse_mda_multiprocess(form_dir: str, mda_dir: str, overwrite: bool = False)
         mda_path = os.path.join(mda_dir, '{}.mda'.format(root))
         mda_paths.append(mda_path)
 
+
+        with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
+            for form_path, mda_path in zip(form_paths, mda_paths):
+               executor.submit(parse_mda, form_path, mda_path,MDA_LIST,PARSE_FAILED_PATH,overwrite)
+
+    
     # Multiprocess
-    with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
-        for form_path, mda_path in zip(form_paths, mda_paths):
-            executor.submit(parse_mda, form_path, mda_path, overwrite)
+        
 
 
-def parse_mda(form_path, mda_path, overwrite=False):
+def parse_mda(form_path, mda_path, MDA_LIST,PARSE_FAILED_PATH,overwrite=False ):
     """ Reads form and parses mda
     Args:
         form_path (str)
@@ -362,6 +408,7 @@ def parse_mda(form_path, mda_path, overwrite=False):
         print("{} already exists.  Skipping parse mda...".format(mda_path))
         return
     # Read
+
     print("Parse MDA {}".format(form_path))
     with open(form_path, "r") as fin:
         text = fin.read()
@@ -377,9 +424,20 @@ def parse_mda(form_path, mda_path, overwrite=False):
 
     if mda:
         print("Write MDA to {}".format(mda_path))
+        temp = MDA_LIST["SUCCESS"]
+        temp.append(mda_path)
+        MDA_LIST["SUCCESS"]=temp;
         write_content(mda, mda_path)
+        
+       
     else:
         print("Parse MDA failed {}".format(form_path))
+        temp = MDA_LIST["FAILED"].copy()
+        temp.add(form_path)
+        MDA_LIST["FAILED"]=temp;
+        copy_parse_failed(form_path,PARSE_FAILED_PATH)
+       
+       
 
 
 def find_mda_from_text(text, start=0):
@@ -436,6 +494,10 @@ def find_mda_from_text(text, start=0):
             end = 0
 
     return mda, end
+
+def copy_parse_failed(source,PARSE_FAILED_PATH):
+    shutil.copy(source, PARSE_FAILED_PATH)
+    print("Copied Parse MDA failed {}".format(source))
 
 
 if __name__ == "__main__":
