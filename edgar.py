@@ -15,34 +15,17 @@ from glob import glob
 
 import requests
 from bs4 import BeautifulSoup
+from args import create_parser
+
 
 SEC_GOV_URL = 'https://www.sec.gov/Archives'
 FORM_INDEX_URL = os.path.join(
     SEC_GOV_URL, 'edgar', 'full-index', '{}', 'QTR{}', 'form.idx').replace("\\", "/")
 
-#FORM_INDEX_URL = SEC_GOV_URL + '/' + 'edgar' + '/' + 'full-index' + '/' + '{}' + '/' + 'QTR{}' + '/' + 'form.idx'
-
 # Used to combine form 10k index files. Adds URL column for lookup
 INDEX_HEADERS = ["Form Type", "Company Name",
                  "CIK", "Date Filed", "File Name", "Url"]
 
-
-def create_parser():
-    """Argument Parser"""
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--start_year', type=int, required=True,
-                        help="year to start")
-    parser.add_argument('-e', '--end_year', type=int, required=True,
-                        help="year to end")
-    parser.add_argument('-q', '--quarters', type=int, nargs="+",
-                        default=[1, 2, 3, 4], help="quarters to download for start to end years")
-    parser.add_argument('-d', '--data_dir', type=str,
-                        default="./data", help="path to save data")
-    parser.add_argument('--overwrite', action="store_true",
-                        help="If True, overwrites downloads and processed files.")
-    parser.add_argument('--debug', action="store_true",
-                        help="Debug mode")
-    return parser
 
 
 def main():

@@ -40,6 +40,11 @@ optional arguments:
                         path to save data
   --overwrite           If True, overwrites downloads and processed files.
   --debug               Debug mode
+  -u USER,              database username
+  -p PASSWORD,          database password
+  --host SERVERNAME,    database address
+  -db DBNAME,           database
+
 ```
 
 ### Workflow

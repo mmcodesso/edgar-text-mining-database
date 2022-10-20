@@ -1,39 +1,19 @@
 """
 script to download tge index and store in a database
 """
-import argparse
 import itertools
 import os
 import time
-from collections import namedtuple
 from functools import wraps
-from glob import glob
 
 import requests
 import pandas as pd
 from sqlalchemy import create_engine
+from args import create_parser
 
 SEC_GOV_URL = 'https://www.sec.gov/Archives'
 FORM_INDEX_URL = os.path.join(
     SEC_GOV_URL, 'edgar', 'full-index', '{}', 'QTR{}', 'form.idx').replace("\\", "/")
-
-def create_parser():
-    """Argument Parser"""
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--start_year', type=int, required=True,
-                        help="year to start")
-    parser.add_argument('-e', '--end_year', type=int, required=True,
-                        help="year to end")
-    parser.add_argument('-q', '--quarters', type=int, nargs="+",
-                        default=[1, 2, 3, 4], help="quarters to download for start to end years")
-    parser.add_argument('--overwrite', action="store_true",
-                        help="If True, overwrites downloads and processed files.")
-    parser.add_argument('-u','--user', help="database username")
-    parser.add_argument('-p','--password', help="database password")
-    parser.add_argument('--host', help="database address")
-    parser.add_argument('-db','--dbname', help="database")
-    parser.add_argument('--debug', action="store_true",help="Debug mode")
-    return parser
 
 def main():
     # Parse arguments
@@ -43,10 +23,10 @@ def main():
     #Create database conection
     db_conection = create_db_conection(args.user,args.password,args.host, args.dbname)
       
-
     # Download indices
     download_indices(args.start_year, args.end_year,
                      args.quarters, db_conection, args.overwrite)
+
 
 def create_db_conection(user: str, password: str, host : str, dbname : str):
     """ 
@@ -59,6 +39,7 @@ def create_db_conection(user: str, password: str, host : str, dbname : str):
         db_connection = create_engine("sqlite:///database/database.sqlite")
     return db_connection
 
+
 def timeit(f):
     @wraps(f)
     def wrapper(*args, **kw):
@@ -69,6 +50,7 @@ def timeit(f):
               .format(f.__name__, end_time-start_time))
         return result
     return wrapper
+
 
 def parse_line_to_record(line, fields_begin):
     """
@@ -86,6 +68,7 @@ def parse_line_to_record(line, fields_begin):
         record.append(field)
     return record
 
+
 @timeit
 def download_indices(start_year: int, end_year: int, quarters: list, db_conection: str, overwrite: bool):
     """ Downloads edgar 10k form indices with multiprocess
@@ -98,7 +81,6 @@ def download_indices(start_year: int, end_year: int, quarters: list, db_conectio
     # Create a list of the forms to download
     forms = []
         
-
     # Prepare arguments
     years = range(start_year, end_year+1)
     urls = [FORM_INDEX_URL.format(year, qtr)
