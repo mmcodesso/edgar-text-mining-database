@@ -219,8 +219,8 @@ def download_forms(index_dir: str, form_dir: str, overwrite: bool = False, debug
 
     # Debug
     if debug:
-        print("Debug: download only 10 forms")
-        download_paths = download_paths[:10]
+        print("Debug: download only 100 forms")
+        download_paths = download_paths[:100]
 
     # Download forms
     nforms = len(download_paths)
