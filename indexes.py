@@ -10,16 +10,17 @@ import requests
 import pandas as pd
 from args import create_parser, create_db_conection
 
+#Define SEC and FORM URL
 SEC_GOV_URL = 'https://www.sec.gov/Archives'
 FORM_INDEX_URL = os.path.join(SEC_GOV_URL, 'edgar', 'full-index', '{}', 'QTR{}', 'form.idx').replace("\\", "/")
 
-def main():
-    # Parse arguments
-    args =create_parser()
+# Parse arguments
+args =create_parser()
 
-    #Create database conection
-    db_conection = create_db_conection(args.user,args.password,args.host, args.dbname)
-      
+#Create database conection
+db_conection = create_db_conection()
+
+def main():
     # Download indices
     download_indices(args.start_year, args.end_year,
                      args.quarters, db_conection, args.company, args.email)

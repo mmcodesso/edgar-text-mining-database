@@ -29,11 +29,18 @@ def create_parser():
     parser.add_argument('-email','--email', type=str, help="Email to inform EDGAR")
     return parser.parse_args()
 
-def create_db_conection(user: str, password: str, host : str, dbname : str):
+def create_db_conection():
+    #create_db_conection(user: str, password: str, host : str, dbname : str):
     """ 
     Create database conection. If not informed, it will create a 
     sqlite database on ./database/database.sqlite
-    """  
+    """ 
+    args =create_parser()
+    user = args.user
+    password = args.password
+    host = args.host
+    dbname = args.dbname
+
     if user and password and host and dbname:
         db_connection = create_engine("postgresql+psycopg2://{user}:{password}@{host}/{dbname}"
                     .format(user = user,password = password,host = host,dbname = dbname))
