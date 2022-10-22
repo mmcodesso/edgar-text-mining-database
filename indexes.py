@@ -106,6 +106,8 @@ def download_indices(start_year: int, end_year: int, quarters: list, db_conectio
     forms_df = pd.DataFrame(forms)
     forms_df = forms_df[(forms_df['form_type'] == "10-K") | (forms_df['form_type'] == "10-Q")]
     forms_df.set_index('id',inplace=True)
+    
+    print("Inserting Form Index to Database")
     forms_df.to_sql('index_queue',con = db_conection,if_exists='replace',index_label ='id')
 
 
