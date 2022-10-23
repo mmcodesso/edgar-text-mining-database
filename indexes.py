@@ -10,9 +10,6 @@ import requests
 import pandas as pd
 from args import create_parser, create_db_conection
 
-#Define SEC and FORM URL
-SEC_GOV_URL = 'https://www.sec.gov/Archives'
-FORM_INDEX_URL = os.path.join(SEC_GOV_URL, 'edgar', 'full-index', '{}', 'QTR{}', 'form.idx').replace("\\", "/")
 
 # Parse arguments
 args =create_parser()
@@ -65,6 +62,10 @@ def download_indices(start_year: int, end_year: int, quarters: list, db_conectio
     """
     # Create a list of the forms to download
     forms = []
+    
+    #Define SEC and FORM URL
+    SEC_GOV_URL = 'https://www.sec.gov/Archives'
+    FORM_INDEX_URL = os.path.join(SEC_GOV_URL, 'edgar', 'full-index', '{}', 'QTR{}', 'form.idx').replace("\\", "/")
         
     # Prepare arguments
     years = range(start_year, end_year+1)
