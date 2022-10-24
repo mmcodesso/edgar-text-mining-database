@@ -14,14 +14,20 @@ from functions.database import form_index, form
 
 
 import requests
-import pandas as pd
+from bs4 import BeautifulSoup
 
 
 # Parse arguments
 args =create_parser()
 company = args.company 
 email = args.email
+
 SEC_GOV_URL = 'https://www.sec.gov/Archives'
+
+if company and email:
+    headers = {'User-Agent': company + " " + email}
+else:
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; rv:91.0) Gecko/20100101 Firefox/91.0'}
 
 #Create database conection
 engine = create_db_conection()
@@ -33,6 +39,10 @@ def main():
 
     #Process form_index
     process_form_index()
+
+    #Return Index_htm
+    forms = return_index_htm(status=0)
+    parse_index_htm(forms)
 
 
 def parse_line_to_record(line, fields_begin):
@@ -98,11 +108,6 @@ def process_form_index():
     for url in urls:
         print("Requesting {}".format(url[0]))
 
-        if company and email:
-            headers = {'User-Agent': company + " " + email}
-        else:
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; rv:91.0) Gecko/20100101 Firefox/91.0'}
-
         res = requests.get(url[0], headers=headers).text
         arrived = False
         fields_begin = None
@@ -126,9 +131,10 @@ def process_form_index():
                             "file_name" : row[4],
                             "form_index": url[0],
                             "index_url": os.path.join(SEC_GOV_URL, row[4][:-4]).replace("\\", "/") +  '-index.html',
-                            "file" : '',
+                            "index_htm" : '',
                             "status" : 0}
                 if row_dict['form_type'] == "10-K" or row_dict['form_type'] == "10-Q":
+
                     form_row = form(form_id = row_dict['id'],
                                     form_type = row_dict['form_type'],
                                     company_name = row_dict['company_name'], 
@@ -137,7 +143,7 @@ def process_form_index():
                                     file_name = row_dict['file_name'],
                                     form_index =row_dict['form_index'],
                                     index_url = row_dict['index_url'],
-                                    file = row_dict['file'],
+                                    index_htm = row_dict['index_htm'],
                                     status = row_dict['status'])
                     forms_list.append(form_row)
             elif arrived:
@@ -157,6 +163,51 @@ def process_form_index():
 
     return
 
+def parse_index_htm(forms):
+    forms_total = len(forms)
+    forms_current = 0
+    for doc in forms:
+        forms_current = forms_current + 1
+        print("Processing document ", forms_current,'/', forms_total)
+
+        document = doc[0]
+        html_form_link = ''
+
+        page = requests.get(document.index_url, headers=headers)
+        soup = BeautifulSoup(page.content,'html5lib')
+        table = soup.find('table', class_ = "tableFile")
+        
+        table_headers = [header.text.lower() for header in table.find_all('th')]
+        results = [{table_headers[i]: cell.text for i, cell in enumerate(row.find_all('td'))} for row in table.find_all('tr')]
+        
+        for row in results:
+            if 'description' in row:
+                form_type = row['type']
+                file_htm = row['document'].strip().split()[0]
+                
+                if form_type == document.form_type:
+                    html_form = table.find('a',string=file_htm).get('href').replace('/ix?doc=','')
+                    html_form_link = 'https://www.sec.gov' + html_form
+        
+        #Update the form_id
+        stmt = (
+            update(form)
+            .where(form.form_id ==document.form_id)
+            .values(index_htm=html_form_link,status=1)
+        ) 
+        with Session(engine) as session:
+            session.execute(stmt)
+            session.commit()        
+
+    return 
+
+
+def return_index_htm(status = 0):
+    session = Session(engine)
+    statement  = select(form).filter_by(status=status)
+    index_htm = session.execute(statement).all()
+    return index_htm
+    
 
 if __name__ == "__main__":
     main()
