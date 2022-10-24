@@ -170,7 +170,7 @@ def parse_index_htm(forms):
     forms_current = 0
     for doc in forms:
         forms_current = forms_current + 1
-        print("Processing document ", forms_current,'/', forms_total)
+        print("Processing -index.htm document ", forms_current,'/', forms_total)
 
         document = doc[0]
         html_form_link = ''
@@ -189,7 +189,7 @@ def parse_index_htm(forms):
                 
                 if form_type == document.form_type:
                     html_form = table.find('a',string=file_htm).get('href').replace('/ix?doc=','')
-                    html_form_link = 'https://www.sec.gov' + html_form
+                    html_form_link = 'https://www.sec.gov' + html_form   #TODO change to use the variable SEC_GOV_URL and os.pahn.join. Didnt worked last time 
         
         #Update the form_id
         stmt = (
