@@ -19,14 +19,15 @@ Specify the starting year and end year and the directory to save outputs.
 By default, indices, forms and mdas will be saved to `./data`
 
 ```bash
-# Downloads and parses MDA section from 2021 to 2021 quarter 1 and 2, and saves to `./data/`
-python edgar.py --start_year 2021 --end_year 2021 --quarters 1 2 --data_dir ./data/
+# Downloads and parses MDA section from 2021 to 2021 quarter 1 and 2, and saves to `./database/database.sqlite`
+# It will use SQLite database. You can pass postgres database connection
+python edgar.py --start_year 2021 --end_year 2021
 ```
 
 ### Usage
 ```bash
 usage: edgar.py [-h] -s START_YEAR -e END_YEAR [-q QUARTERS [QUARTERS ...]]
-                [-d DATA_DIR] [--overwrite] [--debug]
+                [--overwrite] [--debug]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -36,13 +37,11 @@ optional arguments:
                         year to end
   -q QUARTERS [QUARTERS ...], --quarters QUARTERS [QUARTERS ...]
                         quarters to download for start to end years
-  -d DATA_DIR, --data_dir DATA_DIR
-                        path to save data
   --overwrite           If True, overwrites downloads and processed files.
   --debug               Debug mode
   -u USER,              database username
   -p PASSWORD,          database password
-  --host SERVERNAME,    database address
+  -server SERVERNAME,    database address
   -db DBNAME,           database
 
 ```
@@ -50,11 +49,8 @@ optional arguments:
 ### Workflow
 
 The code runs the extraction in the following steps
-1. Download indices for form 10k to `./data/index`
-2. Combines all indices into a single csv `./data/index/combined.csv`
-3. From Step2 combined csv, downloads all form 10k to `./data/form10k`
-4. Parses the html forms with BeautifulSoup to `./data/form10k.parsed`
-5. Parses MDA section to `./data/mda`
+1. Download indices for form 10k
+2. COMMING SOON
 
 ### Notes
 
