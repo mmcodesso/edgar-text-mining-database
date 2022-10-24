@@ -10,7 +10,7 @@ Base = declarative_base()
 
 
 class form_index(Base):
-    __tablename__ = "form_index"
+    __tablename__ = "index"
 
     form_index = Column(String, primary_key=True)
     status = Column(Integer)
@@ -29,9 +29,9 @@ class form(Base):
     file_name =  Column(String)
     form_index = Column(String)
     index_url = Column(String)
-    file = Column(String)
+    index_htm = Column(String)
     status = Column(Integer)
 
     def __repr__(self) -> str:
-        return f"form(form_id={self.form_id!r},form_type={self.form_type!r},company_name={self.company_name!r},cik={self.cik!r},date_filed={self.date_filed!r},file_name={self.file_name!r},form_index={self.form_index!r},index_url={self.index_url!r},status={self.status!r})"
+        return f"form(form_id={self.form_id!r},form_type={self.form_type!r},company_name={self.company_name!r},cik={self.cik!r},date_filed={self.date_filed!r},file_name={self.file_name!r},form_index={self.form_index!r},index_url={self.index_url!r},index_htm={self.index_htm!r},status={self.status!r})"
     
