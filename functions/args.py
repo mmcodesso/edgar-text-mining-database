@@ -1,11 +1,10 @@
 import argparse
-from sqlalchemy import create_engine
-import os
+import datetime
 
 #set default year to last year
-import datetime
 current_time = datetime.datetime.now()
 year = current_time.year - 1
+
 
 def create_parser():
     """Argument Parser"""
@@ -28,25 +27,3 @@ def create_parser():
     parser.add_argument('-company','--company', type=str, help="Company to inform EDGAR")
     parser.add_argument('-email','--email', type=str, help="Email to inform EDGAR")
     return parser.parse_args()
-
-def create_db_conection():
-    #create_db_conection(user: str, password: str, host : str, dbname : str):
-    """ 
-    Create database conection. If not informed, it will create a 
-    sqlite database on ./database/database.sqlite
-    """ 
-    args =create_parser()
-    user = args.user
-    password = args.password
-    host = args.host
-    dbname = args.dbname
-
-    if user and password and host and dbname:
-        db_connection = create_engine("postgresql+psycopg2://{user}:{password}@{host}/{dbname}"
-                    .format(user = user,password = password,host = host,dbname = dbname))
-        print("Conecting to Postgress{}".format(host))
-    else:
-        os.makedirs("./database", exist_ok=True)
-        db_connection = create_engine("sqlite:///database/database.sqlite")
-        print("Using SQLite Database /database/database.sqlite")
-    return db_connection

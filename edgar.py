@@ -15,7 +15,7 @@ from glob import glob
 
 import requests
 from bs4 import BeautifulSoup
-from args import create_parser
+from functions.args import create_parser
 
 
 SEC_GOV_URL = 'https://www.sec.gov/Archives'
