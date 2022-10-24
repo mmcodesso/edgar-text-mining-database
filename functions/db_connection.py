@@ -4,7 +4,9 @@ from sqlalchemy import create_engine
 from functions.database import Base
 
 def create_db_conection():
-    #create_db_conection(user: str, password: str, host : str, dbname : str):
+    #TODO the function is only creating conection to sqlite and postgres, 
+    #     need to take advantage of the databases sqlalchemy and create conection 
+    #     to several databases
     """ 
     Create database conection. If not informed, it will create a 
     sqlite database on ./database/database.sqlite
