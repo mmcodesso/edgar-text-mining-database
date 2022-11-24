@@ -37,11 +37,10 @@ optional arguments:
                         year to end
   -q QUARTERS [QUARTERS ...], --quarters QUARTERS [QUARTERS ...]
                         quarters to download for start to end years
-  --overwrite           If True, overwrites downloads and processed files.
   --debug               Debug mode
   -u USER,              database username
   -p PASSWORD,          database password
-  -server SERVERNAME,    database address
+  -server SERVERNAME,   database address
   -db DBNAME,           database
 
 ```
