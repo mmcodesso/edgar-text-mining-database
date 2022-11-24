@@ -105,10 +105,7 @@ def submission_processing(file):
                 idx += 1
             
             if len(filings_list) > 0:
-                csv_file = tmp_csv + file + '.csv'
-
                 df = pd.DataFrame(filings_list)
-                #df.to_csv(csv_file,header=False,index=False)
                 df.to_csv(tmp_dir + '/submissions.csv',header=False,index=False, mode='a')
 
 
