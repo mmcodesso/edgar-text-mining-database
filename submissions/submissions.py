@@ -5,8 +5,7 @@ from datetime import date
 from datetime import timedelta
 from functools import wraps
 from tqdm import tqdm
-import zipfile
-from zipfile import ZipFile
+from zipfile import ZipFile, ZIP_DEFLATED
 from typing import Any, Dict, List
 import json
 import pandas as pd
@@ -47,8 +46,9 @@ def merge_submission_dicts(to_merge: List[SubmissionsType]) -> SubmissionsType:
     return merged
 
 
-def submission_processing(file):
-    
+def submission_processing(file,zipfile):
+    filings_list = []
+
     sublist = re.split('[-.]',file)[1]
 
     if file.endswith('.json') and sublist != 'submissions':
@@ -65,7 +65,6 @@ def submission_processing(file):
             paginated_submissions = filings["files"]
 
             co_filings = data['filings']['recent']                        
-            filings_list = []
             amount = 0
 
             # Handle pagination for a large number of requests
@@ -95,24 +94,47 @@ def submission_processing(file):
                 if co_filings['form'][n] not in form_types and len(form_types) > 0:
                     continue
                 add_filing = {
+                            "accessionNumber": co_filings['accessionNumber'][n],
                             "cik":cik,
+                            "name":data["name"],
                             "form": co_filings['form'][n],
                             "filingDate": co_filings['filingDate'][n],
-                            "URL": f"https://www.sec.gov/Archives/edgar/data/{cik}/{co_filings['accessionNumber'][n].replace('-', '')}/{co_filings['primaryDocument'][n]}"}
+                            "URL": f"https://www.sec.gov/Archives/edgar/data/{cik}/{co_filings['accessionNumber'][n].replace('-', '')}/{co_filings['primaryDocument'][n]}"
+                            }
+
                 
                 filings_list.append(add_filing)
                         
                 idx += 1
+
+    df = pd.DataFrame()            
+    if len(filings_list) > 0:
+        df = pd.DataFrame(filings_list)
             
-            if len(filings_list) > 0:
-                df = pd.DataFrame(filings_list)
-                df.to_csv(tmp_dir + '/submissions.csv',header=False,index=False, mode='a')
+    return df
+
+def process_submissions(file_path):
+    zipfile = ZipFile(file_path,'r')
+    files = zipfile.namelist()
+    
+    filings_list = []
+    #Process submissions.zip into separate csv files
+    for file in tqdm(files, desc='Processing Submissions.zip'):
+        fiiling_df = submission_processing(file,zipfile)
+        filings_list.append(fiiling_df)
+
+
+    df = pd.concat(filings_list, axis=0)
+    df.to_csv(tmp_dir + '/submissions.csv',header=False,index=False, mode='a')
+
 
 
 def zip_submissions():
-    with zipfile.ZipFile('./submissions/submissions.zip', 'w') as zip:
+    with ZipFile('./submissions/submissions.zip', 'w') as zip:
         filename = str(date.today() - timedelta(days = 1)) + '.csv'
-        zip.write(tmp_dir + '/submissions.csv', arcname=filename, compress_type=zipfile.ZIP_DEFLATED)
+        zip.write(tmp_dir + '/submissions.csv', arcname=filename, compress_type=ZIP_DEFLATED)
+    #remove tmp folder
+    shutil.rmtree(tmp_dir,ignore_errors=True)
 
 
     
@@ -127,14 +149,8 @@ if __name__ == "__main__":
     download_url(submission_url,submissions_zip)  
 
     #Open Submissions.zip
-    print("Openning Submissions.zip")
-    zipfile = ZipFile(submissions_zip,'r')
-    files = zipfile.namelist()
-
-    #Process submissions.zip into separate csv files
-    for file in tqdm(files, desc='Processing Submissions.zip'):
-        submission_processing(file)
-
+    process_submissions(submissions_zip)
+    
     #Zip final file
     zip_submissions()
 
