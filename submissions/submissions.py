@@ -1,6 +1,4 @@
 import urllib.request
-import shutil
-import os
 from datetime import date
 from datetime import timedelta
 from functools import wraps
@@ -13,15 +11,10 @@ import re
 from itertools import chain
 from glob import glob
 
-
-tmp_dir = './submissions/tmp'
-
-submission_url = 'https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip'
-submissions_zip = os.path.join(tmp_dir, 'submissions.zip').replace("\\", "/")
-
 JSONType = Dict[str, Any]
 SubmissionsType = Dict[str, List[str]]
 
+submission_url = 'https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip'
 
 class DownloadProgressBar(tqdm):
     def update_to(self, b=1, bsize=1, tsize=None):
@@ -30,13 +23,14 @@ class DownloadProgressBar(tqdm):
         self.update(b * bsize - self.n)
 
 
-def download_url(url, output_path):
+def download_url(url):
+    """Download the file and return the local file path"""
     with DownloadProgressBar(unit='B', unit_scale=True,miniters=1, desc=url.split('/')[-1]) as t:
         opener = urllib.request.build_opener()
         opener.addheaders = [('User-agent', 'Mauricio Codesso m.codesso@northeastern.edu')]
         urllib.request.install_opener(opener)
-        urllib.request.urlretrieve(url, filename=output_path, reporthook=t.update_to)
-
+        local_filename, headers = urllib.request.urlretrieve(url, reporthook=t.update_to)
+    return local_filename
 
 def merge_submission_dicts(to_merge: List[SubmissionsType]) -> SubmissionsType:
     """Merge dictionaries with same keys."""
@@ -67,7 +61,7 @@ def submission_processing(file,zipfile):
             co_filings = data['filings']['recent']                        
             amount = 0
 
-            # Handle pagination for a large number of requests
+            # Handle pagination for a large number of submissions
             if paginated_submissions:
                 to_merge = [filings["recent"]]
 
@@ -78,12 +72,10 @@ def submission_processing(file,zipfile):
 
                     to_merge.append(g_append)
 
-                # Merge all paginated submissions from files key into recent
-                # and clear files list.
+                # Merge all paginated submissions from files key into recent and clear files list.
                 co_filings = merge_submission_dicts(to_merge)
                 filings["files"] = []
 
-            
             form_types = ['10-K', '10-Q']
             amount = len(co_filings['form']) if amount == 0 else amount
             idx = 0
@@ -101,10 +93,7 @@ def submission_processing(file,zipfile):
                             "filingDate": co_filings['filingDate'][n],
                             "URL": f"https://www.sec.gov/Archives/edgar/data/{cik}/{co_filings['accessionNumber'][n].replace('-', '')}/{co_filings['primaryDocument'][n]}"
                             }
-
-                
-                filings_list.append(add_filing)
-                        
+                filings_list.append(add_filing)          
                 idx += 1
 
     df = pd.DataFrame()            
@@ -117,42 +106,33 @@ def process_submissions(file_path):
     zipfile = ZipFile(file_path,'r')
     files = zipfile.namelist()
     
+    #Process submissions.zip into a list of dataframes
     filings_list = []
-    #Process submissions.zip into separate csv files
     for file in tqdm(files, desc='Processing Submissions.zip'):
         fiiling_df = submission_processing(file,zipfile)
         filings_list.append(fiiling_df)
 
-
+    #Transform the list into a single dataframe
     df = pd.concat(filings_list, axis=0)
-    df.to_csv(tmp_dir + '/submissions.csv',header=False,index=False, mode='a')
+    return df
 
+    
+def zip_submissions(submissions_df, output_file):
+    filename = str(date.today() - timedelta(days = 1)) + '.csv'
+    compression_opts = dict(method='zip',
+                        archive_name=filename)  
 
-
-def zip_submissions():
-    with ZipFile('./submissions/submissions.zip', 'w') as zip:
-        filename = str(date.today() - timedelta(days = 1)) + '.csv'
-        zip.write(tmp_dir + '/submissions.csv', arcname=filename, compress_type=ZIP_DEFLATED)
-    #remove tmp folder
-    shutil.rmtree(tmp_dir,ignore_errors=True)
-
+    submissions_df.to_csv(output_file, compression=compression_opts)
 
     
 if __name__ == "__main__":    
     
-    #Creates a Temporary folder
-    shutil.rmtree(tmp_dir,ignore_errors=True)
-    os.makedirs(tmp_dir, exist_ok=True)
+    #Download submissons.zip from Edgar database
+    submissions_zip = download_url(submission_url)  
 
-    #Download Submissons.zip from Edgar database
-    print("Downloading file submissions.zip")
-    download_url(submission_url,submissions_zip)  
-
-    #Open Submissions.zip
-    process_submissions(submissions_zip)
+    #Process submissions.zip
+    submissions_df = process_submissions(submissions_zip)
     
-    #Zip final file
-    zip_submissions()
-
-    #remove tmp folder
-    shutil.rmtree(tmp_dir,ignore_errors=True)
+    #Export submissions.zip into final csv file
+    output_file = './submissions/submissions.zip'
+    zip_submissions(submissions_df,output_file)
