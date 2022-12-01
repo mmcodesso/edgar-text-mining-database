@@ -1,15 +1,14 @@
 import urllib.request
 from datetime import date
 from datetime import timedelta
-from functools import wraps
 from tqdm import tqdm
-from zipfile import ZipFile, ZIP_DEFLATED
+from zipfile import ZipFile 
 from typing import Any, Dict, List
+from itertools import chain
 import json
 import pandas as pd
 import re
-from itertools import chain
-from glob import glob
+
 
 JSONType = Dict[str, Any]
 SubmissionsType = Dict[str, List[str]]
@@ -25,7 +24,7 @@ class DownloadProgressBar(tqdm):
 
 def download_url(url):
     """Download the file and return the local file path"""
-    with DownloadProgressBar(unit='B', unit_scale=True,miniters=1, desc=url.split('/')[-1]) as t:
+    with DownloadProgressBar(unit='B', unit_scale=True,miniters=1, desc= 'Downloading ' + url.split('/')[-1]) as t:
         opener = urllib.request.build_opener()
         opener.addheaders = [('User-agent', 'Mauricio Codesso m.codesso@northeastern.edu')]
         urllib.request.install_opener(opener)
@@ -124,15 +123,18 @@ def zip_submissions(submissions_df, output_file):
 
     submissions_df.to_csv(output_file, compression=compression_opts)
 
-    
+
+def return_submissions_df(submission_url):
+    """Download and process submissions.zip and return a pandas dataframe"""
+    submissions_zip = download_url(submission_url) 
+    submissions_df = process_submissions(submissions_zip)
+    return submissions_df
+
+
 if __name__ == "__main__":    
     
-    #Download submissons.zip from Edgar database
-    submissions_zip = download_url(submission_url)  
-
-    #Process submissions.zip
-    submissions_df = process_submissions(submissions_zip)
+    submissions_df = return_submissions_df(submission_url)   
     
-    #Export submissions.zip into final csv file
+    #Export submissions.zip into zipped csv file
     output_file = './submissions/submissions.zip'
     zip_submissions(submissions_df,output_file)
