@@ -3,3 +3,4 @@ activate.sh
 __pycache__
 data/
 database/
+extracts/
