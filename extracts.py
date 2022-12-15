@@ -5,14 +5,30 @@ import pandas as pd
 import shutil
 import time
 from tqdm import tqdm
+import argparse
+import sys
 
 form_df = pd.read_csv("form_data.csv")
 Headers = {'User-Agent': 'secedgar@sharklasers.com'}
 
+def CreateParser():
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-n","--number_of_companies", help="Enter the number of companies for which the extract is needed",
+                        type=int,default=-1)
+    group.add_argument("-l", "--link_to_index_htm",help="Link to the index html file for a company",
+                        type=str, default="na")
+    args = parser.parse_args()
+    return args
 
-def extractText(main_text, start, end):
+def ExtractText(main_text, start, end , debug = False):
     s = (main_text.find('"{}"'.format(start)))
     e = (main_text.find('"{}"'.format(end)))
+
+    s , e = min(s,e) , max(s,e)
+
+    if debug:
+        print( "The text starts at : {} and ends at : {}".format(s,e))
 
     text = main_text[s:e]
 
@@ -21,7 +37,7 @@ def extractText(main_text, start, end):
     return text
 
 
-def checkHyperLinksForAll(url, companyname, debug=False):
+def CheckHyperLinksForAll(url, companyname, debug=False):
     res = requests.get(url, headers=Headers)
 
     soup = BeautifulSoup(res.text, 'html.parser')
@@ -60,8 +76,7 @@ def checkHyperLinksForAll(url, companyname, debug=False):
                 print(i.attrs)
                 print(fullstring)
 
-        if (foundItem7a == False) and ((("item" in fullstring) and ("7a" in fullstring)) or (
-                ("quantitative" in fullstring) and ("qualitative" in fullstring) and ("disclosures" in fullstring))):
+        if (foundItem7a == False) and ((("item" in fullstring) and ("7a" in fullstring)) or (("quantitative" in fullstring) and ("qualitative" in fullstring) and ("disclosures" in fullstring)) or (("quantitative" in fullstring) and ("qualitative" in fullstring) and ("disclosure" in fullstring))  ):
 
             foundItem7a = True
 
@@ -121,7 +136,7 @@ def checkHyperLinksForAll(url, companyname, debug=False):
                 if debug:
                     print("End ID1(name) : {}".format(endID1))
 
-                text = extractText(main_text, item7ID, item7aID)
+                text = ExtractText(main_text, item7ID, item7aID,debug)
 
             if (startID2 != None):
 
@@ -133,7 +148,7 @@ def checkHyperLinksForAll(url, companyname, debug=False):
                 if debug:
                     print("End ID2(name) : {}".format(endID2))
 
-                text = extractText(main_text, item7ID, item7aID)
+                text = ExtractText(main_text, item7ID, item7aID,debug)
 
         else:
 
@@ -155,7 +170,7 @@ def checkHyperLinksForAll(url, companyname, debug=False):
                 if debug:
                     print("End ID1(name) : {}".format(endID1))
 
-                text = extractText(main_text, item7ID, item8ID)
+                text = ExtractText(main_text, item7ID, item8ID,debug)
 
             if (startID2 != None):
 
@@ -167,23 +182,16 @@ def checkHyperLinksForAll(url, companyname, debug=False):
                 if debug:
                     print("End ID2(name) : {}".format(endID2))
 
-                    text = extractText(main_text, item7ID, item8ID)
+                text = ExtractText(main_text, item7ID, item8ID,debug)
 
     return item7, item7a, item8, text
 
-
-def main():
-    start_time = time.time()
-
+def CompaniesFromCSV(total_companies):
     result_for_all = {"Company Name": [], "URL": [], "Item 7": [], "Item 7A": [], "Item 8": [], "MDA Extract": []}
-
-    total_companies = 1000
 
     path = "extracts/"
 
-    shutil.rmtree(path, ignore_errors=True)
-
-    os.mkdir(path)
+    os.makedirs(path, exist_ok=True)
 
     for index, rows in tqdm(form_df.iterrows(), total=total_companies):
         # Change here to find the number of companies to be processed.
@@ -193,7 +201,7 @@ def main():
             # print("For company : {}".format(rows["company_name"]))
 
             try:
-                i7, i7a, i8, mda = checkHyperLinksForAll(rows["index_htm"], rows["company_name"], debug=False)
+                i7, i7a, i8, mda = CheckHyperLinksForAll(rows["index_htm"], rows["company_name"], debug=False)
             except Exception as e:
                 print("Exception occured for {} : {}".format(rows["company_name"], repr(e)))
 
@@ -226,6 +234,34 @@ def main():
     result_for_all_pd = pd.DataFrame(result_for_all)
 
     result_for_all_pd.to_excel('Final-a-hrefs.xlsx', index=False)
+
+def main():
+    start_time = time.time()
+
+    arguments = CreateParser()
+
+    if not len(sys.argv) > 1:
+        print("No arguments passed please use -h to get help on the usage")
+
+    if arguments.number_of_companies != -1 :
+        print("Getting the extract of first {} companies from the database".format(arguments.number_of_companies))
+        CompaniesFromCSV(arguments.number_of_companies)
+
+    if arguments.link_to_index_htm != "na" :
+
+        path = "extracts/"
+
+        os.makedirs(path, exist_ok=True)
+
+        print("Getting the extract of  : {}".format(arguments.link_to_index_htm))
+
+        try:
+            i7, i7a, i8, mda = CheckHyperLinksForAll(arguments.link_to_index_htm, "", debug=True)
+        except Exception as e:
+            print("Exception occured for {} : {}".format(arguments.link_to_index_htm, repr(e)))
+
+        with open('extracts/{}.html'.format(arguments.link_to_index_htm.replace('/', '-')), 'w') as f:
+            f.write(mda)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
