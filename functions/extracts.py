@@ -2,13 +2,12 @@ import os
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-import shutil
 import time
 from tqdm import tqdm
 import argparse
 import sys
 
-form_df = pd.read_csv("form_data.csv")
+form_df = pd.read_csv("../form_data.csv")
 Headers = {'User-Agent': 'secedgar@sharklasers.com'}
 
 def CreateParser():
@@ -22,6 +21,7 @@ def CreateParser():
     return args
 
 def ExtractText(main_text, start, end , debug = False):
+
     s = (main_text.find('"{}"'.format(start)))
     e = (main_text.find('"{}"'.format(end)))
 
@@ -48,7 +48,7 @@ def CheckHyperLinksForAll(url, companyname, debug=False):
 
     a_href = soup.find_all('a', href=True)
 
-    if debug == True:
+    if debug:
         print(url)
 
     foundItem7 = False
@@ -189,7 +189,7 @@ def CheckHyperLinksForAll(url, companyname, debug=False):
 def CompaniesFromCSV(total_companies):
     result_for_all = {"Company Name": [], "URL": [], "Item 7": [], "Item 7A": [], "Item 8": [], "MDA Extract": []}
 
-    path = "extracts/"
+    path = "../extracts"
 
     os.makedirs(path, exist_ok=True)
 
@@ -204,6 +204,8 @@ def CompaniesFromCSV(total_companies):
                 i7, i7a, i8, mda = CheckHyperLinksForAll(rows["index_htm"], rows["company_name"], debug=False)
             except Exception as e:
                 print("Exception occured for {} : {}".format(rows["company_name"], repr(e)))
+            with open('../extracts/{}.html'.format(rows["company_name"].replace('/', '')), 'w') as f:
+                f.write(mda)
 
             result_for_all["Company Name"].append(rows["company_name"])
 
@@ -216,9 +218,6 @@ def CompaniesFromCSV(total_companies):
             result_for_all["Item 8"].append(i8)
 
             result_for_all["MDA Extract"].append(mda)
-
-            with open('extracts/{}.html'.format(rows["company_name"].replace('/', '')), 'w') as f:
-                f.write(mda)
 
             # management_set.update(checkHyperlinksMDA(rows["index_htm"],rows["company_name"],debug=False))
 
@@ -249,18 +248,17 @@ def main():
 
     if arguments.link_to_index_htm != "na" :
 
-        path = "extracts/"
+        path = "../extracts/"
 
         os.makedirs(path, exist_ok=True)
 
         print("Getting the extract of  : {}".format(arguments.link_to_index_htm))
 
         try:
-            i7, i7a, i8, mda = CheckHyperLinksForAll(arguments.link_to_index_htm, "", debug=True)
+            i7, i7a, i8, mda = CheckHyperLinksForAll(arguments.link_to_index_htm, "", debug=False)
         except Exception as e:
             print("Exception occured for {} : {}".format(arguments.link_to_index_htm, repr(e)))
-
-        with open('extracts/{}.html'.format(arguments.link_to_index_htm.replace('/', '-')), 'w') as f:
+        with open('../extracts/{}.html'.format(arguments.link_to_index_htm.replace('/', '-')), 'w') as f:
             f.write(mda)
 
     print("--- %s seconds ---" % (time.time() - start_time))
