@@ -7,7 +7,6 @@ from tqdm import tqdm
 import argparse
 import sys
 
-
 form_df = pd.read_csv("../form_data.csv")
 Headers = {'User-Agent': 'secedgar@sharklasers.com'}
 
@@ -36,7 +35,6 @@ def ExtractText(main_text, start, end , debug = False):
     # some_iteration = BeautifulSoup(text,'html.parser')
 
     return text
-
 
 def ExtractItem1A(url, companyname, debug=False):
     res = requests.get(url, headers=Headers)
@@ -117,14 +115,14 @@ def ExtractItem1A(url, companyname, debug=False):
     if foundItem1a:
         item1AID = item1a['href'][1:]
         if debug:
-            print("Item 7 href id/name : {}".format(item1AID))
+            print("Item 1A href id/name : {}".format(item1AID))
 
         if foundItem1b:
 
             item1BID = item1b['href'][1:]
 
             if debug:
-                print("Item 7a href id/name : {}".format(item1BID))
+                print("Item 1B href id/name : {}".format(item1BID))
 
             startID1 = soup.find("a", {"name": item1AID})
             startID2 = soup.find(id=item1a['href'][1:])
@@ -158,7 +156,7 @@ def ExtractItem1A(url, companyname, debug=False):
             item2ID = item2['href'][1:]
 
             if debug:
-                print("Item 8 href id/name : {}".format(item2ID))
+                print("Item 2 href id/name : {}".format(item2ID))
 
             startID1 = soup.find("a", {"name": item1AID})
             startID2 = soup.find(id=item1a['href'][1:])

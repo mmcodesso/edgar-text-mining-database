@@ -5,7 +5,6 @@ import datetime
 current_time = datetime.datetime.now()
 year = current_time.year - 1
 
-
 def create_parser():
     """Argument Parser"""
     parser = argparse.ArgumentParser()
@@ -27,3 +26,14 @@ def create_parser():
     parser.add_argument('-company','--company', type=str, help="Company to inform EDGAR")
     parser.add_argument('-email','--email', type=str, help="Email to inform EDGAR")
     return parser.parse_args()
+
+def CreateParser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i" , "--item" , help="Enter the section for which the extract is needed(1A,7)",required=True)
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-n","--number_of_companies", help="Enter the number of companies for which the extract is needed",
+                        type=int,default=-1)
+    group.add_argument("-l", "--link_to_index_htm",help="Link to the index html file for a company",
+                        type=str, default="na")
+    args = parser.parse_args()
+    return args
