@@ -89,6 +89,37 @@ def main():
 
             pd.DataFrame(item7result).to_excel(path + "Item-7-Extracts.xlsx", index=False)
 
+    if arguments.link_to_index_htm!= "na":
+
+        if item == "1A":
+
+            path1A = path + "/Item 1A/"
+            os.makedirs(path1A, exist_ok=True)
+
+            print("Extracting Item {}".format(arguments.link_to_index_htm))
+
+            try:
+                i1a, i1b, i2, item1Aextract= ExtractItem1A(arguments.link_to_index_htm, "ExtractedCompany", debug=False)
+            except Exception as e:
+                print("Exception occured for {} : {}".format("URL", repr(e)))
+            with open(path1A + '{}.html'.format("ExtractedCompany".replace('/', '-')), 'w') as f:
+                f.write(item1Aextract)
+
+        if item == "7":
+
+            path7 = path+"/Item 7/"
+            os.makedirs(path7, exist_ok=True)
+
+            print("Extracting Item {}".format(arguments.link_to_index_htm))
+
+            try:
+                i7, i7a, i8, item7extract = ExtractItem7(arguments.link_to_index_htm, "ExtractedCompany", debug=False)
+            except Exception as e:
+                print("Exception occured for {} : {}".format("URL", repr(e)))
+            with open(path7 + '{}.html'.format("ExtractedCompany".replace('/', '-')), 'w') as f:
+                f.write(item7extract)
+
+
     print("--- %s seconds ---" % (time.time() - start_time))
 
 
